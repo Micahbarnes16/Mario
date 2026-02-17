@@ -2,22 +2,38 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
   <title>Mario Platformer</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { background: #111; display: flex; justify-content: center; align-items: center; height: 100vh; overflow: hidden; }
+
+    body {
+      background: #111;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100dvh;
+      overflow: hidden;
+      touch-action: none;
+    }
 
     #container {
       position: relative;
-      display: inline-block;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
     }
 
     canvas {
       display: block;
       image-rendering: pixelated;
+      /* Scale to fit viewport, capped at native 800×512 */
+      width:  min(800px, 100vw, calc(100dvh * (800 / 512)));
+      height: min(512px, 100dvh, calc(100vw * (512 / 800)));
+      touch-action: none;
     }
 
+    /* ── Fullscreen button ─────────────────────────────── */
     #fs-btn {
       position: absolute;
       bottom: 8px;
@@ -30,12 +46,79 @@
       font: 12px monospace;
       cursor: pointer;
       user-select: none;
-      z-index: 10;
+      z-index: 20;
+      touch-action: none;
       transition: background 0.15s;
     }
     #fs-btn:hover { background: rgba(255,255,255,0.2); }
 
-    /* Fullscreen styles */
+    /* ── Virtual controls ──────────────────────────────── */
+    #controls {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      padding: 10px 14px;
+      pointer-events: none; /* gaps between buttons are pass-through */
+      z-index: 15;
+    }
+
+    #dpad {
+      display: flex;
+      gap: 6px;
+    }
+
+    #actions {
+      display: flex;
+      gap: 10px;
+      align-items: flex-end;
+    }
+
+    .ctrl-btn {
+      width: 72px;
+      height: 72px;
+      border-radius: 50%;
+      border: 2px solid rgba(255,255,255,0.45);
+      background: rgba(0,0,0,0.38);
+      color: #fff;
+      font-size: 20px;
+      font-weight: bold;
+      cursor: pointer;
+      user-select: none;
+      touch-action: none;
+      pointer-events: all;
+      -webkit-tap-highlight-color: transparent;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.08s;
+    }
+    .ctrl-btn:active,
+    .ctrl-btn.pressed { background: rgba(255,255,255,0.28); }
+
+    #btn-jump {
+      width: 82px;
+      height: 82px;
+      background: rgba(200,40,40,0.45);
+      font-size: 13px;
+      font-weight: 900;
+      letter-spacing: 0.5px;
+    }
+    #btn-fire {
+      background: rgba(40,100,210,0.40);
+      font-size: 13px;
+      font-weight: 900;
+    }
+
+    /* Hide virtual controls on devices with a real pointer (desktop) */
+    @media (hover: hover) and (pointer: fine) {
+      #controls { display: none; }
+    }
+
+    /* ── Fullscreen overrides ──────────────────────────── */
     #container:fullscreen,
     #container:-webkit-full-screen {
       display: flex;
@@ -48,8 +131,7 @@
 
     #container:fullscreen canvas,
     #container:-webkit-full-screen canvas {
-      /* Scale to fit screen while preserving 800:512 aspect ratio */
-      width: min(100vw, calc(100vh * (800 / 512)));
+      width:  min(100vw, calc(100vh * (800 / 512)));
       height: min(100vh, calc(100vw * (512 / 800)));
       image-rendering: pixelated;
     }
@@ -59,6 +141,18 @@
   <div id="container">
     <canvas id="game"></canvas>
     <button id="fs-btn" title="Toggle fullscreen (F)">&#x26F6; Fullscreen</button>
+
+    <!-- Virtual controls (mobile only) -->
+    <div id="controls">
+      <div id="dpad">
+        <button class="ctrl-btn" id="btn-left">&#9664;</button>
+        <button class="ctrl-btn" id="btn-right">&#9654;</button>
+      </div>
+      <div id="actions">
+        <button class="ctrl-btn" id="btn-fire">FIRE</button>
+        <button class="ctrl-btn" id="btn-jump">JUMP</button>
+      </div>
+    </div>
   </div>
   <script type="module" src="/src/main.ts"></script>
 </body>
