@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mario Platformer</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #111; display: flex; justify-content: center; align-items: center; height: 100vh; overflow: hidden; }
+
+    #container {
+      position: relative;
+      display: inline-block;
+    }
+
+    canvas {
+      display: block;
+      image-rendering: pixelated;
+    }
+
+    #fs-btn {
+      position: absolute;
+      bottom: 8px;
+      right: 8px;
+      background: rgba(0,0,0,0.5);
+      color: #fff;
+      border: 1px solid rgba(255,255,255,0.4);
+      border-radius: 4px;
+      padding: 4px 8px;
+      font: 12px monospace;
+      cursor: pointer;
+      user-select: none;
+      z-index: 10;
+      transition: background 0.15s;
+    }
+    #fs-btn:hover { background: rgba(255,255,255,0.2); }
+
+    /* Fullscreen styles */
+    #container:fullscreen,
+    #container:-webkit-full-screen {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      width: 100vw;
+      height: 100vh;
+      background: #000;
+    }
+
+    #container:fullscreen canvas,
+    #container:-webkit-full-screen canvas {
+      /* Scale to fit screen while preserving 800:512 aspect ratio */
+      width: min(100vw, calc(100vh * (800 / 512)));
+      height: min(100vh, calc(100vw * (512 / 800)));
+      image-rendering: pixelated;
+    }
+  </style>
+</head>
+<body>
+  <div id="container">
+    <canvas id="game"></canvas>
+    <button id="fs-btn" title="Toggle fullscreen (F)">&#x26F6; Fullscreen</button>
+  </div>
+  <script type="module" src="/src/main.ts"></script>
+</body>
+</html>
