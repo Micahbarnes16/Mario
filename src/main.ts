@@ -51,6 +51,7 @@ function wireButton(id: string, action: TouchAction) {
 
   btn.addEventListener("pointerup", release);
   btn.addEventListener("pointercancel", release);
+  btn.addEventListener("contextmenu", (e) => e.preventDefault());
 }
 
 wireButton("btn-left",  "left");
