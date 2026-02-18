@@ -136,9 +136,14 @@ export class Player {
     this.vy = result.vy;
     this.grounded = result.grounded;
 
-    // Clamp left edge
+    // Clamp to level bounds
     if (this.x < 0) {
       this.x = 0;
+      this.vx = 0;
+    }
+    const maxX = levelWidth * TILE_SIZE - this.w;
+    if (this.x > maxX) {
+      this.x = maxX;
       this.vx = 0;
     }
 
