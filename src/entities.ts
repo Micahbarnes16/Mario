@@ -299,6 +299,56 @@ export class Fireball {
   }
 }
 
+export class Paratroopa {
+  type = "paratroopa" as const;
+  x: number;
+  y: number;
+  vx = -1;
+  vy = 0;
+  w = 28;
+  h = 36;
+  alive = true;
+  baseY: number;
+  sineOffset = 0;
+
+  constructor(x: number, y: number) {
+    this.x = x * TILE_SIZE + 2;
+    this.y = y * TILE_SIZE + (TILE_SIZE - 36);
+    this.baseY = this.y;
+  }
+
+  get rect(): Rect {
+    return { x: this.x, y: this.y, w: this.w, h: this.h };
+  }
+
+  update(levelWidth: number) {
+    this.sineOffset++;
+    this.y = this.baseY + Math.sin(this.sineOffset * 0.05) * 40;
+
+    this.x += this.vx;
+    if (this.x < 0) {
+      this.x = 0;
+      this.vx = Math.abs(this.vx);
+    }
+    if (this.x + this.w > levelWidth * TILE_SIZE) {
+      this.x = levelWidth * TILE_SIZE - this.w;
+      this.vx = -Math.abs(this.vx);
+    }
+  }
+
+  /** Called when stomped — returns a grounded Koopa to replace this Paratroopa */
+  stomp(): Enemy {
+    this.alive = false;
+    const tileX = Math.floor(this.x / TILE_SIZE);
+    const tileY = Math.floor(this.baseY / TILE_SIZE);
+    const koopa = new Enemy(tileX, tileY, "koopa");
+    koopa.x = this.x;
+    koopa.y = this.y;
+    koopa.vx = -ENEMY_SPEED;
+    return koopa;
+  }
+}
+
 export class PopupScore {
   x: number;
   y: number;

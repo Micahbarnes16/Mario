@@ -33,6 +33,25 @@
       touch-action: none;
     }
 
+    /* ── Mute button ───────────────────────────────────── */
+    #mute-btn {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      background: rgba(0,0,0,0.5);
+      color: #fff;
+      border: 1px solid rgba(255,255,255,0.4);
+      border-radius: 4px;
+      padding: 4px 8px;
+      font: 14px monospace;
+      cursor: pointer;
+      user-select: none;
+      z-index: 20;
+      touch-action: none;
+      transition: background 0.15s;
+    }
+    #mute-btn:hover { background: rgba(255,255,255,0.2); }
+
     /* ── Fullscreen button ─────────────────────────────── */
     #fs-btn {
       position: absolute;
@@ -181,6 +200,7 @@
 <body>
   <div id="container">
     <canvas id="game"></canvas>
+    <button id="mute-btn" title="Toggle sound">&#128266;</button>
     <button id="fs-btn" title="Toggle fullscreen (F)">&#x26F6; Fullscreen</button>
 
     <!-- Virtual controls (mobile only) -->

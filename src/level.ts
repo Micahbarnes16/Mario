@@ -42,6 +42,11 @@ export function parseLevel(grid: string[]): LevelData {
         tiles[y][x] = { type: "empty", x, y, broken: false, hit: false, containsCoin: false, containsMushroom: false };
         continue;
       }
+      if (ch === "W") {
+        enemySpawns.push({ x, y, type: "paratroopa" });
+        tiles[y][x] = { type: "empty", x, y, broken: false, hit: false, containsCoin: false, containsMushroom: false };
+        continue;
+      }
       if (ch === "C") {
         coinPositions.push({ x, y });
         tiles[y][x] = { type: "empty", x, y, broken: false, hit: false, containsCoin: false, containsMushroom: false };

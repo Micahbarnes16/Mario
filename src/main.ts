@@ -3,7 +3,14 @@ import { Game } from "./game";
 const canvas = document.getElementById("game") as HTMLCanvasElement;
 const container = document.getElementById("container") as HTMLDivElement;
 const fsBtn = document.getElementById("fs-btn") as HTMLButtonElement;
+const muteBtn = document.getElementById("mute-btn") as HTMLButtonElement;
 const game = new Game(canvas);
+
+// ── Mute ────────────────────────────────────────────────
+muteBtn.addEventListener("click", () => {
+  game.sound.toggleMute();
+  muteBtn.textContent = game.sound.muted ? "\uD83D\uDD07" : "\uD83D\uDD0A";
+});
 
 // ── Fullscreen ─────────────────────────────────────────
 function toggleFullscreen() {

@@ -1,7 +1,7 @@
 import { Camera } from "./camera";
 import { Player } from "./player";
-import { Enemy, Coin, Mushroom, Fireball, PopupScore } from "./entities";
-import { Tile, TILE_SIZE, CANVAS_WIDTH, CANVAS_HEIGHT, GameState } from "./types";
+import { Enemy, Coin, Mushroom, Fireball, PopupScore, Paratroopa } from "./entities";
+import { Tile, TILE_SIZE, CANVAS_WIDTH, CANVAS_HEIGHT } from "./types";
 
 const COLORS: Record<string, string> = {
   ground: "#8B4513",
@@ -35,6 +35,51 @@ export class Renderer {
   clear() {
     this.ctx.fillStyle = COLORS.sky;
     this.ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+  }
+
+  drawBackground(cameraX: number) {
+    const ctx = this.ctx;
+
+    // Layer: clouds at 0.1× camera speed
+    ctx.fillStyle = "rgba(255,255,255,0.7)";
+    const cloudOffsetX = -(cameraX * 0.1) % (CANVAS_WIDTH + 120);
+    const cloudPositions = [80, 240, 420, 600, 760];
+    for (const base of cloudPositions) {
+      const x = ((base + cloudOffsetX + CANVAS_WIDTH + 120) % (CANVAS_WIDTH + 120)) - 60;
+      ctx.beginPath();
+      ctx.ellipse(x, 60, 40, 18, 0, 0, Math.PI * 2);
+      ctx.ellipse(x + 35, 55, 28, 15, 0, 0, Math.PI * 2);
+      ctx.ellipse(x - 30, 65, 25, 13, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // Layer 2: distant hills at 0.2× camera speed
+    ctx.fillStyle = "#5aab5a";
+    const periodW2 = 600;
+    const hill2Base = -(cameraX * 0.2) % periodW2;
+    for (let i = -1; i <= Math.ceil(CANVAS_WIDTH / periodW2) + 1; i++) {
+      const bx = i * periodW2 + hill2Base;
+      ctx.beginPath();
+      ctx.moveTo(bx, CANVAS_HEIGHT);
+      ctx.quadraticCurveTo(bx + 80, CANVAS_HEIGHT - 80, bx + 150, CANVAS_HEIGHT);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(bx + 160, CANVAS_HEIGHT);
+      ctx.quadraticCurveTo(bx + 230, CANVAS_HEIGHT - 60, bx + 300, CANVAS_HEIGHT);
+      ctx.fill();
+    }
+
+    // Layer 3: near hills at 0.5× camera speed
+    ctx.fillStyle = "#4a9e4a";
+    const periodW3 = 500;
+    const hill3Base = -(cameraX * 0.5) % periodW3;
+    for (let i = -1; i <= Math.ceil(CANVAS_WIDTH / periodW3) + 1; i++) {
+      const bx = i * periodW3 + hill3Base;
+      ctx.beginPath();
+      ctx.moveTo(bx, CANVAS_HEIGHT);
+      ctx.quadraticCurveTo(bx + 70, CANVAS_HEIGHT - 100, bx + 130, CANVAS_HEIGHT);
+      ctx.fill();
+    }
   }
 
   drawTiles(tiles: Tile[][], camera: Camera) {
@@ -162,6 +207,39 @@ export class Renderer {
     }
   }
 
+  drawParatroopas(paratroopas: Paratroopa[], camera: Camera) {
+    for (const pt of paratroopas) {
+      if (!pt.alive) continue;
+      const sx = pt.x - camera.x;
+      const sy = pt.y - camera.y;
+
+      // Body (green like koopa)
+      this.ctx.fillStyle = COLORS.enemy_koopa;
+      this.ctx.fillRect(sx, sy, pt.w, pt.h);
+
+      // Eyes
+      this.ctx.fillStyle = "#FFF";
+      this.ctx.fillRect(sx + 4, sy + 4, 8, 6);
+      this.ctx.fillRect(sx + pt.w - 12, sy + 4, 8, 6);
+
+      // Wings — flap with sine animation
+      const wingFlap = Math.sin(pt.sineOffset * 0.2) * 4;
+      this.ctx.fillStyle = "#FFFFFF";
+      // Left wing
+      this.ctx.beginPath();
+      this.ctx.moveTo(sx - 2, sy + 10 + wingFlap);
+      this.ctx.lineTo(sx - 14, sy + 4);
+      this.ctx.lineTo(sx - 2, sy + 20 + wingFlap);
+      this.ctx.fill();
+      // Right wing
+      this.ctx.beginPath();
+      this.ctx.moveTo(sx + pt.w + 2, sy + 10 + wingFlap);
+      this.ctx.lineTo(sx + pt.w + 14, sy + 4);
+      this.ctx.lineTo(sx + pt.w + 2, sy + 20 + wingFlap);
+      this.ctx.fill();
+    }
+  }
+
   drawCoins(coins: Coin[], camera: Camera) {
     for (const c of coins) {
       if (c.collected) continue;
@@ -225,14 +303,35 @@ export class Renderer {
     }
   }
 
-  drawHUD(score: number, coins: number, lives: number, level: number) {
-    this.ctx.fillStyle = "#FFF";
+  drawHUD(score: number, coins: number, lives: number, level: number, timeRemaining: number, combo: number) {
     this.ctx.font = "bold 16px monospace";
     this.ctx.textAlign = "left";
+
+    this.ctx.fillStyle = "#FFF";
     this.ctx.fillText(`SCORE: ${String(score).padStart(6, "0")}`, 16, 28);
-    this.ctx.fillText(`COINS: ${coins}`, 250, 28);
-    this.ctx.fillText(`LIVES: ${lives}`, 450, 28);
-    this.ctx.fillText(`WORLD: ${level + 1}`, 650, 28);
+    this.ctx.fillText(`COINS: ${coins}`, 220, 28);
+    this.ctx.fillText(`LIVES: ${lives}`, 380, 28);
+    this.ctx.fillText(`WORLD: ${level + 1}`, 540, 28);
+
+    // Timer — red when under 60s
+    const timeInt = Math.ceil(timeRemaining);
+    this.ctx.fillStyle = timeRemaining < 60 ? "#FF4444" : "#FFF";
+    this.ctx.fillText(`TIME: ${String(timeInt).padStart(3, " ")}`, 680, 28);
+
+    // Combo indicator
+    if (combo > 1) {
+      this.ctx.fillStyle = "#FFD700";
+      this.ctx.font = "bold 20px monospace";
+      this.ctx.textAlign = "center";
+      this.ctx.fillText(`\u00d7${combo} COMBO!`, CANVAS_WIDTH / 2, 56);
+    }
+  }
+
+  drawHighScore(highScore: number) {
+    this.ctx.fillStyle = "#FFD700";
+    this.ctx.font = "bold 18px monospace";
+    this.ctx.textAlign = "center";
+    this.ctx.fillText(`BEST: ${String(highScore).padStart(6, "0")}`, CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 + 70);
   }
 
   drawScreen(text: string, subtext: string) {

@@ -10,7 +10,16 @@ bun run build    # Build to /dist
 npx tsc --noEmit # Type-check without emitting
 ```
 
-No test runner or linter is configured.
+```bash
+bun test         # Run all tests (Bun built-in Jest-compatible runner)
+```
+
+## TDD Guidelines
+
+- **New logic requires tests first.** Write a failing test in `src/__tests__/` before implementing.
+- Run `bun test` before committing. All tests must pass.
+- Test files live in `src/__tests__/*.test.ts`.
+- Browser-only code (`AudioContext`, `canvas`, `localStorage`) stays in `renderer.ts`, `sound.ts`, and `main.ts` — keep it isolated so the rest of the modules remain testable without DOM mocks.
 
 ## Architecture
 
@@ -26,7 +35,9 @@ A browser-based 2D Mario-style platformer (~2000 lines of TypeScript) using the 
 |--------|------|
 | `game.ts` | State machine (menu / playing / levelcomplete / gameover / win); orchestrates all subsystems |
 | `player.ts` | Player physics, movement, power-up state (small → big → fire), scoring |
-| `entities.ts` | Enemy AI (Goomba, Koopa), coins, mushrooms, fireballs, score popups |
+| `entities.ts` | Enemy AI (Goomba, Koopa, Paratroopa), coins, mushrooms, fireballs, score popups |
+| `sound.ts` | Web Audio API procedural sound effects; `SoundManager` with mute toggle |
+| `scoring.ts` | Pure functions: `calcTimeBonus`, `incrementCombo`, `resetCombo` |
 | `physics.ts` | AABB collision detection; X and Y axes resolved separately to prevent tunneling |
 | `renderer.ts` | All canvas 2D drawing: tiles, sprites, HUD, menus |
 | `camera.ts` | Viewport tracking — follows player with offset, clamped to level bounds |
@@ -50,6 +61,7 @@ Levels are ASCII strings where each character is a tile:
 | `S` | Player start |
 | `E` | Goomba |
 | `K` | Koopa |
+| `W` | Paratroopa (flying Koopa) |
 | `F` | Goal flag |
 
 ### Physics Notes
