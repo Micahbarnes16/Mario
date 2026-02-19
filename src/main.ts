@@ -75,6 +75,7 @@ function gameLoop(timestamp: number) {
 
   if (delta >= FRAME_TIME) {
     lastTime = timestamp - (delta % FRAME_TIME);
+    game.input.pollGamepad();
     game.update();
     game.draw();
   }
