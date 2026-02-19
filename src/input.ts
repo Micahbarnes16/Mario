@@ -2,6 +2,7 @@ export class Input {
   private keys = new Map<string, boolean>();
   private touch = { left: false, right: false, jump: false, fire: false, enter: false };
   private gamepad = { left: false, right: false, jump: false, fire: false, enter: false };
+  private connectedIndex: number | null = null;
 
   constructor() {
     window.addEventListener("keydown", (e) => {
@@ -13,25 +14,55 @@ export class Input {
     window.addEventListener("keyup", (e) => {
       this.keys.set(e.code, false);
     });
+    // Track the first gamepad that becomes active (browsers only expose gamepads after
+    // the user presses a button while the page is focused — this event fires at that moment).
+    window.addEventListener("gamepadconnected", (e) => {
+      if (this.connectedIndex === null) {
+        this.connectedIndex = (e as GamepadEvent).gamepad.index;
+      }
+    });
+    window.addEventListener("gamepaddisconnected", (e) => {
+      if ((e as GamepadEvent).gamepad.index === this.connectedIndex) {
+        this.connectedIndex = null;
+        this.gamepad = { left: false, right: false, jump: false, fire: false, enter: false };
+      }
+    });
   }
 
   /** Call once per frame (before update) to snapshot the first connected gamepad. */
   pollGamepad(): void {
     if (typeof navigator === "undefined" || typeof navigator.getGamepads !== "function") return;
-    const pads = navigator.getGamepads();
-    const pad = pads[0] ?? pads[1] ?? pads[2] ?? pads[3] ?? null;
-    if (!pad) {
+    try {
+      const pads = navigator.getGamepads();
+
+      // Find the pad: prefer the one we got via gamepadconnected, else scan.
+      let pad: Gamepad | null = null;
+      if (this.connectedIndex !== null) {
+        pad = pads[this.connectedIndex] ?? null;
+      }
+      if (!pad) {
+        for (let i = 0; i < pads.length; i++) {
+          if (pads[i]) { pad = pads[i]; this.connectedIndex = i; break; }
+        }
+      }
+
+      if (!pad) {
+        this.gamepad = { left: false, right: false, jump: false, fire: false, enter: false };
+        return;
+      }
+
+      const axisX = pad.axes[0] ?? 0;
+      const DEAD = 0.3;
+      const btn = (i: number) => pad!.buttons[i]?.pressed ?? false;
+      this.gamepad.left  = axisX < -DEAD || btn(14);          // left stick or D-Pad left
+      this.gamepad.right = axisX >  DEAD || btn(15);          // left stick or D-Pad right
+      this.gamepad.jump  = btn(0) || btn(12);                 // A or D-Pad up
+      this.gamepad.fire  = btn(1) || btn(2) || btn(4) || btn(5); // B, X, LB, RB
+      this.gamepad.enter = btn(9) || btn(0);                  // Start or A
+    } catch {
+      // Gamepad API unavailable or threw — leave prior state cleared
       this.gamepad = { left: false, right: false, jump: false, fire: false, enter: false };
-      return;
     }
-    const axisX = pad.axes[0] ?? 0;
-    const DEAD = 0.3;
-    const btn = (i: number) => pad.buttons[i]?.pressed ?? false;
-    this.gamepad.left  = axisX < -DEAD || btn(14);          // left stick or D-Pad left
-    this.gamepad.right = axisX >  DEAD || btn(15);          // left stick or D-Pad right
-    this.gamepad.jump  = btn(0) || btn(12);                 // A or D-Pad up
-    this.gamepad.fire  = btn(1) || btn(2) || btn(4) || btn(5); // B, X, LB, RB
-    this.gamepad.enter = btn(9) || btn(0);                  // Start or A
   }
 
   setTouch(action: keyof typeof this.touch, pressed: boolean) {

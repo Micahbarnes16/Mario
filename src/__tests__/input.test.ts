@@ -1,11 +1,17 @@
 import { describe, it, expect } from "bun:test";
 import { Input } from "../input";
 
-// Input constructor adds window event listeners, which need a global window.
-// Bun doesn't provide a browser DOM, so we stub window minimally.
+// Stub window with a real event-listener map so we can fire gamepad events.
+type ListenerMap = Record<string, ((e: Event) => void)[]>;
+const listenerMap: ListenerMap = {};
 (globalThis as unknown as Record<string, unknown>).window = {
-  addEventListener: () => {},
+  addEventListener: (type: string, fn: (e: Event) => void) => {
+    (listenerMap[type] ??= []).push(fn);
+  },
 };
+function fireWindowEvent(type: string, detail: object) {
+  for (const fn of listenerMap[type] ?? []) fn(detail as Event);
+}
 
 // Helper: build a minimal GamepadButton
 function btn(pressed: boolean): GamepadButton {
@@ -205,5 +211,69 @@ describe("Input.pollGamepad", () => {
     };
     input.pollGamepad();
     expect(input.jump).toBe(false);
+  });
+
+  it("does not throw when getGamepads throws", () => {
+    (globalThis as unknown as Record<string, unknown>).navigator = {
+      getGamepads: () => { throw new Error("permission denied"); },
+    };
+    const input = new Input();
+    expect(() => input.pollGamepad()).not.toThrow();
+    expect(input.jump).toBe(false);
+  });
+});
+
+describe("Input gamepadconnected / gamepaddisconnected events", () => {
+  it("gamepadconnected event caches index and enables polling", () => {
+    const pad = fakeGamepad();
+    const padList = [pad, null, null, null];
+    (globalThis as unknown as Record<string, unknown>).navigator = {
+      getGamepads: () => padList,
+    };
+    const input = new Input();
+
+    // Simulate browser firing gamepadconnected
+    fireWindowEvent("gamepadconnected", { gamepad: { index: 0 } });
+
+    // Now press A
+    const buttons: GamepadButton[] = Array.from({ length: 16 }, () => btn(false));
+    buttons[0] = btn(true);
+    padList[0] = fakeGamepad({ buttons });
+
+    input.pollGamepad();
+    expect(input.jump).toBe(true);
+  });
+
+  it("gamepaddisconnected clears state and cached index", () => {
+    const buttons: GamepadButton[] = Array.from({ length: 16 }, () => btn(false));
+    buttons[0] = btn(true);
+    (globalThis as unknown as Record<string, unknown>).navigator = {
+      getGamepads: () => [fakeGamepad({ buttons })],
+    };
+    const input = new Input();
+    fireWindowEvent("gamepadconnected", { gamepad: { index: 0 } });
+    input.pollGamepad();
+    expect(input.jump).toBe(true);
+
+    // Disconnect — state should clear immediately
+    fireWindowEvent("gamepaddisconnected", { gamepad: { index: 0 } });
+    expect(input.jump).toBe(false);
+  });
+
+  it("gamepaddisconnected for a different index does not clear state", () => {
+    const buttons: GamepadButton[] = Array.from({ length: 16 }, () => btn(false));
+    buttons[0] = btn(true);
+    (globalThis as unknown as Record<string, unknown>).navigator = {
+      getGamepads: () => [fakeGamepad({ buttons })],
+    };
+    const input = new Input();
+    fireWindowEvent("gamepadconnected", { gamepad: { index: 0 } });
+    input.pollGamepad();
+    expect(input.jump).toBe(true);
+
+    // Different slot disconnects — should not affect our gamepad
+    fireWindowEvent("gamepaddisconnected", { gamepad: { index: 1 } });
+    input.pollGamepad();
+    expect(input.jump).toBe(true);
   });
 });
